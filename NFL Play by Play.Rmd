@@ -1,0 +1,252 @@
+---
+title: "NFL Play by Play"
+output: html_notebook
+---
+
+Load packages
+
+```{r}
+library(readxl) 
+library(writexl)
+library(dplyr)
+library(tree)
+library(boot)
+library(caret)
+library(RANN)
+library(e1071)
+library(arm)
+library(xgboost)
+library(lattice)
+library(rattle)
+library(kernlab)
+library(rpart)
+library(ggcorrplot)
+library(corrplot)
+library(MASS)
+library(pROC)
+library(mice)
+library(fastDummies)
+```
+
+Load datasets 
+
+```{r}
+pbp_13 = read_excel("nfl_pbp_13.xlsx")
+pbp_14 = read_excel("nfl_pbp_14.xlsx")
+pbp_15 = read_excel("nfl_pbp_15.xlsx")
+pbp_16 = read_excel("nfl_pbp_16.xlsx")
+pbp_17 = read_excel("nfl_pbp_17.xlsx")
+pbp_18 = read_excel("nfl_pbp_18.xlsx")
+pbp_19 = read_excel("nfl_pbp_19.xlsx")
+```
+
+Data Cleaning and Manipulation
+
+```{r}
+pbp_13 = pbp_13 %>% filter(IsTwoPointConversion == "0") %>%
+  filter(IsPenalty == "0") %>%
+  filter(IsChallenge == "0") %>%
+  filter(IsSack == "0") %>%
+  filter(IsIncomplete == "0") %>%
+  filter(IsInterception == "0") %>%
+  filter(IsFumble == "0") %>%
+  filter(Formation %in% c("NO HUDDLE", "NO HUDDLE SHOTGUN", "SHOTGUN", "UNDER CENTER", "WILDCAT")) %>%
+  filter(PlayType %in% c("RUSH", "PASS", "SCRAMBLE"))
+pbp_13$GameDate = as.Date(pbp_13$GameDate)
+pbp_13 = pbp_13[c(1,2,3,4,6,7,8,9,19,20,21,23,24,27,38,39,40,12)]
+
+pbp_14 = pbp_14 %>% filter(IsTwoPointConversion == "0") %>%
+  filter(IsPenalty == "0") %>%
+  filter(IsChallenge == "0") %>%
+  filter(IsSack == "0") %>%
+  filter(IsIncomplete == "0") %>%
+  filter(IsInterception == "0") %>%
+  filter(IsFumble == "0") %>%
+  filter(Formation %in% c("NO HUDDLE", "NO HUDDLE SHOTGUN", "SHOTGUN", "UNDER CENTER", "WILDCAT")) %>%
+  filter(PlayType %in% c("RUSH", "PASS", "SCRAMBLE"))
+pbp_14$GameDate = as.Date(pbp_14$GameDate)
+pbp_14 = pbp_14[c(1,2,3,4,6,7,8,9,19,20,21,23,24,27,38,39,40,12)]
+
+pbp_15 = pbp_15 %>% filter(IsTwoPointConversion == "0") %>%
+  filter(IsPenalty == "0") %>%
+  filter(IsChallenge == "0") %>%
+  filter(IsSack == "0") %>%
+  filter(IsIncomplete == "0") %>%
+  filter(IsInterception == "0") %>%
+  filter(IsFumble == "0") %>%
+  filter(Formation %in% c("NO HUDDLE", "NO HUDDLE SHOTGUN", "SHOTGUN", "UNDER CENTER", "WILDCAT")) %>%
+  filter(PlayType %in% c("RUSH", "PASS", "SCRAMBLE"))
+pbp_15$GameDate = as.Date(pbp_15$GameDate)
+pbp_15 = pbp_15[c(1,2,3,4,6,7,8,9,19,20,21,23,24,27,38,39,40,12)]
+
+pbp_16 = pbp_16 %>% filter(IsTwoPointConversion == "0") %>%
+  filter(IsPenalty == "0") %>%
+  filter(IsChallenge == "0") %>%
+  filter(IsSack == "0") %>%
+  filter(IsIncomplete == "0") %>%
+  filter(IsInterception == "0") %>%
+  filter(IsFumble == "0") %>%
+  filter(Formation %in% c("NO HUDDLE", "NO HUDDLE SHOTGUN", "SHOTGUN", "UNDER CENTER", "WILDCAT")) %>%
+  filter(PlayType %in% c("RUSH", "PASS", "SCRAMBLE"))
+pbp_16$GameDate = as.Date(pbp_16$GameDate)
+pbp_16 = pbp_16[c(1,2,3,4,6,7,8,9,19,20,21,23,24,27,38,39,40,12)]
+
+pbp_17 = pbp_17 %>% filter(IsTwoPointConversion == "0") %>%
+  filter(IsPenalty == "0") %>%
+  filter(IsChallenge == "0") %>%
+  filter(IsSack == "0") %>%
+  filter(IsIncomplete == "0") %>%
+  filter(IsInterception == "0") %>%
+  filter(IsFumble == "0") %>%
+  filter(Formation %in% c("NO HUDDLE", "NO HUDDLE SHOTGUN", "SHOTGUN", "UNDER CENTER", "WILDCAT")) %>%
+  filter(PlayType %in% c("RUSH", "PASS", "SCRAMBLE"))
+pbp_17$GameDate = as.Date(pbp_17$GameDate)
+pbp_17 = pbp_17[c(1,2,3,4,6,7,8,9,19,20,21,23,24,27,38,39,40,12)]
+
+pbp_18 = pbp_18 %>% filter(IsTwoPointConversion == "0") %>%
+  filter(IsPenalty == "0") %>%
+  filter(IsChallenge == "0") %>%
+  filter(IsSack == "0") %>%
+  filter(IsIncomplete == "0") %>%
+  filter(IsInterception == "0") %>%
+  filter(IsFumble == "0") %>%
+  filter(Formation %in% c("NO HUDDLE", "NO HUDDLE SHOTGUN", "SHOTGUN", "UNDER CENTER", "WILDCAT")) %>%
+  filter(PlayType %in% c("RUSH", "PASS", "SCRAMBLE"))
+pbp_18$GameDate = as.Date(pbp_18$GameDate)
+pbp_18 = pbp_18[c(1,2,3,4,6,7,8,9,19,20,21,23,24,27,38,39,40,12)]
+
+pbp_19 = pbp_19 %>% filter(IsTwoPointConversion == "0") %>%
+  filter(IsPenalty == "0") %>%
+  filter(IsChallenge == "0") %>%
+  filter(IsSack == "0") %>%
+  filter(IsIncomplete == "0") %>%
+  filter(IsInterception == "0") %>%
+  filter(IsFumble == "0") %>%
+  filter(Formation %in% c("NO HUDDLE", "NO HUDDLE SHOTGUN", "SHOTGUN", "UNDER CENTER", "WILDCAT")) %>%
+  filter(PlayType %in% c("RUSH", "PASS", "SCRAMBLE"))
+pbp_19$GameDate = as.Date(pbp_19$GameDate)
+pbp_19 = pbp_19[c(1,2,3,4,6,7,8,9,19,20,21,23,24,27,38,39,40,12)]
+```
+
+Combine datasets to make one large train set - 2013 to 2018
+
+```{r}
+pbp_combined = pbp_13 %>% rbind(pbp_14) %>%
+  rbind(pbp_15) %>%
+  rbind(pbp_16) %>%
+  rbind(pbp_17) %>%
+  rbind(pbp_18)
+```
+
+Fill in NAs for train set and select columns to be used in the train set
+
+```{r}
+pbp_combined$PassType[is.na(pbp_combined$PassType)] = 'OTHER'
+pbp_combined$RushDirection[is.na(pbp_combined$RushDirection)] = "OTHER"
+
+pbp_train = pbp_combined[c(3,4,7,8,11,13,14,15,16,17,18)]
+```
+
+Fill in NAs for test set and select columns to be used in the test set
+
+```{r}
+# FIll in NAs for test set
+pbp_19$PassType[is.na(pbp_19$PassType)] = 'OTHER'
+pbp_19$RushDirection[is.na(pbp_19$RushDirection)] = "OTHER"
+
+# Select columns to be used in test set
+pbp_test = pbp_19[c(3,4,7,8,11,13,14,15,16,17,18)]
+```
+
+Remove character variables for correlation plot
+
+```{r}
+pbp_cor = pbp_train[-c(5,7,8,10)]
+
+corrplot(cor(pbp_cor, use="complete.obs"), method="number",type="lower", number.cex = .7)
+```
+
+Change character variables to factors and fix column names for modeling
+
+```{r}
+pbp_train$Formation = as.factor(pbp_train$Formation)
+pbp_train$PassType = as.factor(pbp_train$PassType)
+pbp_train$RushDirection = as.factor(pbp_train$RushDirection)
+pbp_train$YardLineDirection = as.factor(pbp_train$YardLineDirection)
+pbp_train$SeriesFirstDown = as.factor(pbp_train$SeriesFirstDown)
+
+pbp_test$Formation = as.factor(pbp_test$Formation)
+pbp_test$PassType = as.factor(pbp_test$PassType)
+pbp_test$RushDirection = as.factor(pbp_test$RushDirection)
+pbp_test$YardLineDirection = as.factor(pbp_test$YardLineDirection)
+pbp_test$SeriesFirstDown = as.factor(pbp_test$SeriesFirstDown)
+
+colnames(pbp_train) <- make.names(colnames(pbp_train))
+colnames(pbp_test) <- make.names(colnames(pbp_test))
+```
+
+Logistic regression analysis for variable significance
+
+```{r}
+pbp.logi.1 = glm(SeriesFirstDown~., pbp_train, family="binomial")
+summary(pbp.logi.1)
+```
+
+ML models with 10 fold cross validation
+
+```{r}
+# 10-fold Cross-Validation
+control <- trainControl(method="cv", number=10)
+metric <- "Accuracy"
+
+# Linear Discriminant Analysis (LDA)
+set.seed(1)
+fit.lda.2 <- train(SeriesFirstDown~., data=pbp_train, method="lda", metric=metric, trControl=control)
+
+# Classfication and Regression Trees (CART)
+set.seed(1)
+fit.cart.2 <- train(SeriesFirstDown~., data=pbp_train, method="rpart", metric=metric, trControl=control)
+
+# Bayesian Generalized Linear Model - Logistic Regression
+set.seed(1)
+fit.baylogi.2 <- train(SeriesFirstDown~., data=pbp_train, method="bayesglm", metric=metric, trControl=control)
+
+# Logistic Regression
+set.seed(1)
+fit.logi.2  <- train(SeriesFirstDown~., data=pbp_train, method="glm", metric=metric, trControl=control)
+
+```
+
+Summarize accuracy of models and select the best model
+
+```{r}
+results.1 <- resamples(list(lda=fit.lda.2, cart=fit.cart.2, baylogi=fit.baylogi.2, logi=fit.logi.2))
+summary(results.1)
+```
+
+Summarize the Best Model
+
+```{r}
+print(fit.baylogi.2)
+```
+
+Accuracy of the model predicting the dependent variable in the test set
+
+```{r}
+pbp_test_1 = pbp_test[-c(11)]
+
+pbp_test_1$SeriesFirstDown1 = predict(fit.baylogi.2, type = "raw", newdata=pbp_test_1)
+mean(pbp_test_1$SeriesFirstDown1==pbp_test$SeriesFirstDown)
+table(pbp_test_1$SeriesFirstDown1,pbp_test$SeriesFirstDown)
+```
+
+ROC Curve, Threshold, Sensitivity, and Specificity
+
+```{r}
+pred.baylogi = predict(fit.baylogi.2, type = "prob", pbp_train)
+pred.baylogi_1 = as.numeric(pred.baylogi[,2])
+baylogi.roc = roc(response = pbp_train$SeriesFirstDown, predictor = pred.baylogi_1)
+plot(baylogi.roc, legacy.axes = TRUE, print.auc.y = 1.0, print.auc = TRUE)
+coords(baylogi.roc, "best", "threshold")
+```
+
